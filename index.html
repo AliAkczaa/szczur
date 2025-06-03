@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zabij Szczura: Kanałowa Przygoda!</title> <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <img id="animated-background-tractor" src="zdjecie 1 - tlo.jpg" alt="Kanał ściekowy" draggable="false">
+        <div id="clickable-ozzy-wrapper" class="hidden" draggable="false">
+            <img id="target-image" src="zdjecie 2.jpg" alt="Szczur">
+        </div>
+        
+        <div id="start-screen">
+            <h1>Zabij Szczura!</h1> <p>Kiedy pojawi się Szczur, musisz kliknąć go w ciągu 2 sekund, zanim ucieknie! Im więcej szczurów zabijesz, tym lepiej!</p> <div id="nick-input-container">
+                <label for="nickname-input">Twój Nick:</label>
+                <input type="text" id="nickname-input" placeholder="Wpisz swój nick" maxlength="15">
+            </div>
+            <button id="start-button">Rozpocznij Polowanie!</button> <button id="show-leaderboard-button">Ranking</button>
+        </div>
+
+        <div id="end-screen" class="hidden">
+            <h1>KONIEC GRY!</h1>
+            <p id="end-message">Szczur uciekł! Przegrałeś!</p> <p id="final-score-display">Złapałeś: <span id="final-score">0</span> szczurów!</p> <button id="restart-button">Zagraj Jeszcze Raz!</button>
+            <button id="show-leaderboard-after-game-button">Zobacz Ranking</button>
+        </div>
+
+        <div id="leaderboard-screen" class="hidden">
+            <h2>Ranking Łowców Szczurów</h2> <ol id="leaderboard-list"></ol>
+            <button id="back-to-start-button">Wróć do menu</button>
+        </div>
+
+        <div id="score-display">Zabite Szczury: <span id="score">0</span></div> <div id="message-display"></div>
+    </div>
+
+    <audio id="background-music" loop>
+        <source src="lochy.mp3" type="audio/mpeg">
+        Twoja przeglądarka nie obsługuje elementu audio.
+    </audio>
+    <audio id="death-sound">
+        <source src="death.mp3" type="audio/mpeg">
+        Twoja przeglądarka nie obsługuje elementu audio.
+    </audio>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    
+    <script src="script.js"></script>
+</body>
+</html>
