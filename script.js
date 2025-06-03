@@ -19,6 +19,7 @@ const db = firebase.firestore();
 // Pobieranie referencji do elementów DOM
 const backgroundTractor = document.getElementById('animated-background-tractor');
 const clickableOzzyWrapper = document.getElementById('clickable-ozzy-wrapper'); 
+const targetImage = document.getElementById('target-image'); // Referencja do samego obrazka Ozzy'ego
 const scoreDisplay = document.getElementById('score');
 const messageDisplay = document.getElementById('message-display');
 const gameContainer = document.getElementById('game-container');
@@ -42,6 +43,7 @@ const backToStartButton = document.getElementById('back-to-start-button');
 let score = 0;
 let timeoutId;
 let isGameActive = false;
+let isOzzyDying = false; // Flaga do kontroli stanu animacji śmierci
 
 // --- Ustawienia Poziomu Trudności Czasu ---
 let currentTimeLimit = 2000;
@@ -60,7 +62,7 @@ let dx, dy;
 
 const CLICKS_FOR_DIFFICULTY_INCREASE = 5;
 
-// --- Referencje do elementów audio (DODANE) ---
+// --- Referencje do elementów audio ---
 const backgroundMusic = document.getElementById('background-music');
 const deathSound = document.getElementById('death-sound');
 
@@ -118,17 +120,22 @@ function resetGame() {
     currentSpeed = INITIAL_SPEED;
 
     isGameActive = false;
+    isOzzyDying = false; // Reset flagi
     endScreen.classList.add('hidden');
     leaderboardScreen.classList.add('hidden');
     startScreen.classList.remove('hidden');
     currentTimeLimit = INITIAL_TIME_LIMIT;
     nicknameInput.value = playerNickname;
 
-    // Zatrzymaj muzykę w tle, gdy gra jest resetowana (np. powrót do menu) (DODANE)
+    // Zatrzymaj muzykę w tle, gdy gra jest resetowana
     if (backgroundMusic) {
         backgroundMusic.pause();
-        backgroundMusic.currentTime = 0; // Zresetuj czas odtwarzania
+        backgroundMusic.currentTime = 0;
     }
+    // Upewnij się, że Ozzy nie ma klasy animacji śmierci po resecie
+    targetImage.classList.remove('dying-ozzy'); 
+    targetImage.style.transform = ''; // Zresetuj transform
+    targetImage.style.opacity = ''; // Zresetuj opacity
 }
 
 function showMessage(message, duration = 1500) {
@@ -210,8 +217,17 @@ function animateTargetImage() {
 function startRound() {
     if (!isGameActive) return;
 
-    clickableOzzyWrapper.classList.remove('hidden');
-    moveTargetImage();
+    // WAŻNE: Upewnij się, że Ozzy jest zresetowany przed staniem się widocznym
+    targetImage.classList.remove('dying-ozzy'); // Usuń klasę animacji śmierci
+    targetImage.style.transform = ''; // Zresetuj transform do domyślnego
+    targetImage.style.opacity = ''; // Zresetuj opacity do domyślnego (1)
+
+    isOzzyDying = false; // Reset flagi, nowy Ozzy jest gotowy
+
+    clickableOzzyWrapper.classList.remove('hidden'); // Spraw, aby wrapper był widoczny
+    clickableOzzyWrapper.style.pointerEvents = 'auto'; // Spraw, aby był klikalny ponownie
+    
+    moveTargetImage(); // Ustaw pozycję nowego Ozzy'ego
 
     dx = (Math.random() < 0.5 ? 1 : -1) * currentSpeed;
     dy = (Math.random() < 0.5 ? 1 : -1) * currentSpeed;
@@ -230,6 +246,7 @@ function startRound() {
 
 function endGame(message) {
     isGameActive = false;
+    isOzzyDying = false; // Reset flagi po zakończeniu gry
     clearTimeout(timeoutId);
     cancelAnimationFrame(animationFrameId);
 
@@ -245,41 +262,59 @@ function endGame(message) {
 
     endScreen.classList.remove('hidden');
 
-    // Zatrzymaj muzykę w tle po zakończeniu gry (DODANE)
+    // Zatrzymaj muzykę w tle po zakończeniu gry
     if (backgroundMusic) {
         backgroundMusic.pause();
         backgroundMusic.currentTime = 0;
     }
+    // Upewnij się, że klasa animacji śmierci jest usunięta po zakończeniu gry
+    targetImage.classList.remove('dying-ozzy'); 
+    targetImage.style.transform = ''; // Zresetuj transform
+    targetImage.style.opacity = ''; // Zresetuj opacity
 }
 
 function handleTargetClick(event) {
-    if (isGameActive && event.currentTarget === clickableOzzyWrapper && !clickableOzzyWrapper.classList.contains('hidden')) {
-        event.stopPropagation();
-        score++;
-        scoreDisplay.textContent = score;
-        clearTimeout(timeoutId);
-        cancelAnimationFrame(animationFrameId);
-
-        clickableOzzyWrapper.classList.add('hidden');
-
-        // Odtwórz dźwięk śmierci/kliknięcia (DODANE)
-        if (deathSound) {
-            deathSound.currentTime = 0; // Zresetuj dźwięk, aby mógł być odtworzony ponownie natychmiast
-            deathSound.play().catch(e => console.error("Błąd odtwarzania deathSound:", e));
-        }
-
-        if (score > 0 && score % CLICKS_FOR_DIFFICULTY_INCREASE === 0) {
-            currentTimeLimit = Math.max(MIN_TIME_LIMIT, currentTimeLimit - DECREMENT_PER_CLICK);
-            currentSpeed = Math.min(MAX_SPEED, currentSpeed + SPEED_INCREMENT);
-            console.log(`Zwiększenie trudności! Nowy limit czasu: ${currentTimeLimit}ms, Nowa prędkość: ${currentSpeed}`);
-        }
-
-        setTimeout(() => {
-            if (isGameActive) {
-                startRound();
-            }
-        }, 300);
+    // Guard - jeśli gra nieaktywna LUB Ozzy już umiera, zignoruj kliknięcie
+    if (!isGameActive || isOzzyDying) { 
+        return;
     }
+
+    isOzzyDying = true; // Ustaw flagę natychmiast, aby zablokować kolejne kliknięcia
+
+    event.stopPropagation();
+    score++;
+    scoreDisplay.textContent = score;
+    clearTimeout(timeoutId);
+    cancelAnimationFrame(animationFrameId);
+
+    // Odtwórz dźwięk śmierci/kliknięcia
+    if (deathSound) {
+        deathSound.currentTime = 0; // Zresetuj dźwięk, aby mógł być odtworzony ponownie natychmiast
+        deathSound.play().catch(e => console.error("Błąd odtwarzania deathSound:", e));
+    }
+
+    // Dodaj klasę animacji do obrazka Ozzy'ego (wizualna animacja)
+    targetImage.classList.add('dying-ozzy');
+
+    // Natychmiast spraw, aby wrapper był nieklikalny, ale pozostaw go widocznym
+    clickableOzzyWrapper.style.pointerEvents = 'none'; 
+
+    // Logika Poziomu Trudności (dzieje się od razu)
+    if (score > 0 && score % CLICKS_FOR_DIFFICULTY_INCREASE === 0) {
+        currentTimeLimit = Math.max(MIN_TIME_LIMIT, currentTimeLimit - DECREMENT_PER_CLICK);
+        currentSpeed = Math.min(MAX_SPEED, currentSpeed + SPEED_INCREMENT);
+        console.log(`Zwiększenie trudności! Nowy limit czasu: ${currentTimeLimit}ms, Nowa prędkość: ${currentSpeed}`);
+    }
+
+    const newOzzyAppearanceDelay = 300; // Opóźnienie przed pojawieniem się nowego Ozzy'ego
+
+    // Rozpocznij nową rundę po krótkiej przerwie
+    // To sprawia, że nowy Ozzy pojawia się szybko, podczas gdy stary Ozzy animuje
+    setTimeout(() => {
+        if (isGameActive) { // Sprawdź stan gry ponownie, na wszelki wypadek
+            startRound(); // startRound zajmie się resetowaniem flag i pokazywaniem nowego Ozzy'ego
+        }
+    }, newOzzyAppearanceDelay); 
 }
 
 // ---- Obsługa zdarzeń ----
@@ -299,7 +334,7 @@ startButton.addEventListener('click', () => {
     currentSpeed = INITIAL_SPEED;
     startRound();
 
-    // Rozpocznij odtwarzanie muzyki w tle po pierwszym kliknięciu użytkownika (DODANE)
+    // Rozpocznij odtwarzanie muzyki w tle po pierwszym kliknięciu użytkownika
     if (backgroundMusic) {
         backgroundMusic.play().catch(e => console.error("Błąd odtwarzania backgroundMusic:", e));
     }
